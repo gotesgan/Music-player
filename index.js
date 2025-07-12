@@ -12,8 +12,8 @@ import { fileURLToPath } from "url";
 import yts from "yt-search";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { exec } from "child_process";
-import util from "util";
+import { exec } from 'child_process';
+import util from 'util';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,7 +26,7 @@ const limiter = rateLimit({
   max: 100,
 });
 app.use(limiter);
-app.set("trust proxy", "loopback");
+// app.set("trust proxy", true);
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
@@ -112,20 +112,28 @@ async function searchYouTube(query) {
   }
 }
 
-const execPromise = util.promisify(exec);
-
-export async function getStreamUrl(videoId) {
+async function getStreamUrl(videoId) {
   try {
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const cmd = `yt-dlp --cookies youtube-cookies.txt -f "bestaudio[ext=m4a]/bestaudio" -g "${videoUrl}"`;
-    const { stdout } = await execPromise(cmd); // <- fixed name
+    const info = await ytdl.getInfo(
+      `https://www.youtube.com/watch?v=${videoId}`
+    );
+    const audioFormats = ytdl.filterFormats(info.formats, "audioonly");
+    if (!audioFormats.length) throw new Error("No audio formats available");
+
+    const bestFormat = audioFormats.sort(
+      (a, b) => b.audioBitrate - a.audioBitrate
+    )[0];
+
     return {
-      url: stdout.trim(),
-      videoId,
+      url: bestFormat.url,
+      quality: bestFormat.audioBitrate,
+      format: bestFormat.container,
+      title: info.videoDetails.title,
+      duration: info.videoDetails.lengthSeconds,
     };
   } catch (error) {
-    console.error("Stream URL error (yt-dlp):", error.message);
-    throw new Error("Failed to get stream URL with cookies");
+    console.error("Stream URL error:", error.message);
+    throw new Error("Failed to get stream URL");
   }
 }
 
@@ -184,21 +192,23 @@ app.get("/stream", async (req, res) => {
       videoId = youtubeResult.videoId;
     }
 
-    const streamUrl = await getStreamUrl(videoId);
-    const audioStream = await fetch(streamUrl);
-
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     res.set({
       "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-cache",
       "Accept-Ranges": "bytes",
+      "Cache-Control": "no-cache",
     });
-
-    audioStream.body.pipe(res);
+    ytdl(videoUrl, { filter: "audioonly", quality: "highestaudio" })
+      .on("error", (err) =>
+        res
+          .status(500)
+          .json({ error: "Streaming failed", message: err.message })
+      )
+      .pipe(res);
   } catch (error) {
     res.status(500).json({ error: "Streaming failed", message: error.message });
   }
 });
-
 
 // 🧠 Get YouTube video info
 app.get("/info", async (req, res) => {
