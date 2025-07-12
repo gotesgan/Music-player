@@ -184,23 +184,21 @@ app.get("/stream", async (req, res) => {
       videoId = youtubeResult.videoId;
     }
 
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const streamUrl = await getStreamUrl(videoId);
+    const audioStream = await fetch(streamUrl);
+
     res.set({
       "Content-Type": "audio/mpeg",
-      "Accept-Ranges": "bytes",
       "Cache-Control": "no-cache",
+      "Accept-Ranges": "bytes",
     });
-    ytdl(videoUrl, { filter: "audioonly", quality: "highestaudio" })
-      .on("error", (err) =>
-        res
-          .status(500)
-          .json({ error: "Streaming failed", message: err.message })
-      )
-      .pipe(res);
+
+    audioStream.body.pipe(res);
   } catch (error) {
     res.status(500).json({ error: "Streaming failed", message: error.message });
   }
 });
+
 
 // 🧠 Get YouTube video info
 app.get("/info", async (req, res) => {
