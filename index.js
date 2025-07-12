@@ -111,12 +111,14 @@ async function searchYouTube(query) {
     throw new Error("Failed to search YouTube");
   }
 }
+
 const execPromise = util.promisify(exec);
+
 export async function getStreamUrl(videoId) {
   try {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const cmd = `yt-dlp --cookies youtube-cookies.txt -f "bestaudio[ext=m4a]/bestaudio" -g "${videoUrl}"`;
-    const { stdout } = await execAsync(cmd);
+    const { stdout } = await execPromise(cmd); // <- fixed name
     return {
       url: stdout.trim(),
       videoId,
@@ -126,6 +128,7 @@ export async function getStreamUrl(videoId) {
     throw new Error("Failed to get stream URL with cookies");
   }
 }
+
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
