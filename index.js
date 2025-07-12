@@ -20,11 +20,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-});
-app.use(limiter);
+
 app.set("trust proxy", true);
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
