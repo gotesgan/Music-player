@@ -372,6 +372,5 @@ app.use((req, res) => {
 });
 
 // 🚀 Start server
-app.listen(PORT, () => {
-    console.log(`🎵 Music Streaming API running on http://localhost:${PORT}`);
-});
+
+export default app;
