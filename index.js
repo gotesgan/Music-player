@@ -137,9 +137,9 @@ async function getStreamUrl(videoId) {
   }
 }
 
-// app.get('/', (req, res) => {
-//    res.sendFile(__dirname + '/public/index.html');
-// });
+app.get('/', (req, res) => {
+   res.sendFile(__dirname + '/public/index.html');
+});
 
 // 💊 Health check
 app.get("/health", (req, res) => {
