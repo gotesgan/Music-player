@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 import yts from "yt-search";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import { exec } from "child_process";
+import util from "util";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -109,28 +111,29 @@ async function searchYouTube(query) {
     throw new Error("Failed to search YouTube");
   }
 }
-
+const execPromise = util.promisify(exec);
 async function getStreamUrl(videoId) {
   try {
-    const info = await ytdl.getInfo(
-      `https://www.youtube.com/watch?v=${videoId}`
-    );
-    const audioFormats = ytdl.filterFormats(info.formats, "audioonly");
-    if (!audioFormats.length) throw new Error("No audio formats available");
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-    const bestFormat = audioFormats.sort(
-      (a, b) => b.audioBitrate - a.audioBitrate
-    )[0];
+    // Get direct audio stream URL
+    const { stdout: streamUrl } = await execPromise(
+      `yt-dlp -f "bestaudio[ext=m4a]/bestaudio" -g "${url}"`
+    );
+
+    // Get metadata in JSON
+    const { stdout: infoJson } = await execPromise(`yt-dlp -j "${url}"`);
+    const info = JSON.parse(infoJson.trim());
 
     return {
-      url: bestFormat.url,
-      quality: bestFormat.audioBitrate,
-      format: bestFormat.container,
-      title: info.videoDetails.title,
-      duration: info.videoDetails.lengthSeconds,
+      url: streamUrl.trim(),
+      quality: info.abr,
+      format: info.ext,
+      title: info.title,
+      duration: info.duration,
     };
   } catch (error) {
-    console.error("Stream URL error:", error.message);
+    console.error("Stream URL error (yt-dlp):", error.message);
     throw new Error("Failed to get stream URL");
   }
 }
