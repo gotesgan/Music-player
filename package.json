@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A free music streaming API that combines Spotify metadata with YouTube audio streaming",
   "main": "index.jss",
+  "type": "module",
   "scripts": {
      "start": "node index.js",
     "dev": "nodemon server.js"
