@@ -112,32 +112,20 @@ async function searchYouTube(query) {
   }
 }
 const execPromise = util.promisify(exec);
-async function getStreamUrl(videoId) {
+export async function getStreamUrl(videoId) {
   try {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-
-    // Get direct audio stream URL
-    const { stdout: streamUrl } = await execPromise(
-      `yt-dlp -f "bestaudio[ext=m4a]/bestaudio" -g "${url}"`
-    );
-
-    // Get metadata in JSON
-    const { stdout: infoJson } = await execPromise(`yt-dlp -j "${url}"`);
-    const info = JSON.parse(infoJson.trim());
-
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const cmd = `yt-dlp --cookies youtube-cookies.txt -f "bestaudio[ext=m4a]/bestaudio" -g "${videoUrl}"`;
+    const { stdout } = await execAsync(cmd);
     return {
-      url: streamUrl.trim(),
-      quality: info.abr,
-      format: info.ext,
-      title: info.title,
-      duration: info.duration,
+      url: stdout.trim(),
+      videoId,
     };
   } catch (error) {
     console.error("Stream URL error (yt-dlp):", error.message);
-    throw new Error("Failed to get stream URL");
+    throw new Error("Failed to get stream URL with cookies");
   }
 }
-
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
