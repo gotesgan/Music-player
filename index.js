@@ -7,12 +7,11 @@ import rateLimit from "express-rate-limit";
 import qs from "qs";
 import dotenv from "dotenv";
 dotenv.config();
-// import path from 'path';
-// import { fileURLToPath } from 'url';
-//
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-//
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -145,9 +144,9 @@ async function getStreamUrl(videoId) {
   }
 }
 
-// app.get('/', (req, res) => {
-//    res.sendFile(__dirname + '/public/index.html');
-// });
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
 
 // 💊 Health check
 app.get("/health", (req, res) => {
