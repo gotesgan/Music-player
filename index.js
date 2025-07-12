@@ -19,7 +19,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+app.use(limiter);
 app.set("trust proxy", true);
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
@@ -89,30 +93,19 @@ async function searchSpotify(query) {
   }
 }
 
+import yts from "yt-search";
+
 async function searchYouTube(query) {
   try {
-    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-      query
-    )}`;
-    const response = await axios.get(searchUrl, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
+    const result = await yts(query);
+    const video = result.videos[0];
+    if (!video) throw new Error("No video found");
 
-    const $ = cheerio.load(response.data);
-    const scriptTags = $("script").toArray();
-    let videoId = null;
-
-    for (const script of scriptTags) {
-      const content = $(script).html();
-      const match = content?.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-      if (match?.[1]) {
-        videoId = match[1];
-        break;
-      }
-    }
-
-    if (!videoId) throw new Error("No video found");
-    return { videoId, url: `https://www.youtube.com/watch?v=${videoId}` };
+    return {
+      videoId: video.videoId,
+      url: video.url,
+      title: video.title,
+    };
   } catch (error) {
     console.error("YouTube search error:", error.message);
     throw new Error("Failed to search YouTube");
@@ -144,9 +137,9 @@ async function getStreamUrl(videoId) {
   }
 }
 
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
-});
+// app.get('/', (req, res) => {
+//    res.sendFile(__dirname + '/public/index.html');
+// });
 
 // 💊 Health check
 app.get("/health", (req, res) => {
@@ -427,9 +420,7 @@ app.get("/recommendations", async (req, res) => {
     });
   }
 });
-// app.listen(PORT, () => {
-//   console.log(`Server is running on http://localhost:${PORT}`);
-// });
+
 // 🧯 Error and 404
 app.use((err, req, res, next) => {
   console.error(err.stack);
